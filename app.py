@@ -17,6 +17,12 @@ def generate_image(prompt):
     arr = np.random.randint(0, 256, (height, width, 3), dtype=np.uint8)
     return Image.fromarray(arr)
 
+def handle_text(prompt):
+    """Echo back whatever the user types."""
+    if not prompt:
+        return "No input provided."
+    return f"You said: {prompt}"
+
 def handle_files(uploaded_files):
     """Return a message summarizing uploaded files."""
     if not uploaded_files:
@@ -25,6 +31,7 @@ def handle_files(uploaded_files):
 
 with gr.Blocks() as demo:
     gr.Markdown("# Tachi Interface Demo")
+
     with gr.Tab(label="Voice"):
         audio_input = gr.Audio(type="filepath", label="Upload Audio")
         voice_output = gr.Textbox(label="Result")
@@ -34,6 +41,11 @@ with gr.Blocks() as demo:
         text_input = gr.Textbox(label="Prompt", placeholder="Describe the image you want to generate")
         image_output = gr.Image(label="Generated Image")
         text_input.submit(fn=generate_image, inputs=text_input, outputs=image_output)
+
+    with gr.Tab(label="Text"):
+        chat_input = gr.Textbox(label="Enter your text prompt", lines=3)
+        chat_output = gr.Textbox(label="Response")
+        chat_input.submit(fn=handle_text, inputs=chat_input, outputs=chat_output)
 
     with gr.Tab(label="File Upload"):
         file_input = gr.File(label="Upload Files", file_count="multiple")
