@@ -1,7 +1,37 @@
+import os
 import gradio as gr
 from PIL import Image
 import numpy as np
 import soundfile as sf
+from huggingface_hub import login
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
+
+# ------------------------------------------------------------------------
+# Hugging Face authentication and model loading
+# ------------------------------------------------------------------------
+
+# Fetch your Hugging Face token from an environment variable
+hf_token = os.environ.get("HF_TOKEN")
+if hf_token:
+    # Log in so gated models can be downloaded
+    login(token=hf_token)
+
+# Name of the Mistral model to load; adjust if you use a different checkpoint
+model_name = "mistralai/Mistral-7B-Instruct-v0.3"
+
+# Load tokenizer and model (this will download weights on first run)
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=hf_token)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map="auto",
+    torch_dtype=torch.float16,
+    use_auth_token=hf_token,
+)
+
+# ------------------------------------------------------------------------
+# Handler functions for each tab
+# ------------------------------------------------------------------------
 
 def transcribe(audio_file):
     """Return a simple summary of the uploaded audio."""
@@ -18,16 +48,27 @@ def generate_image(prompt):
     return Image.fromarray(arr)
 
 def handle_text(prompt):
-    """Echo back whatever the user types."""
+    """Generate a response using the Mistral model."""
     if not prompt:
         return "No input provided."
-    return f"You said: {prompt}"
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=128,
+        do_sample=True,
+        temperature=0.7,
+    )
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 def handle_files(uploaded_files):
     """Return a message summarizing uploaded files."""
     if not uploaded_files:
         return "No files uploaded."
     return f"Received {len(uploaded_files)} file(s)."
+
+# ------------------------------------------------------------------------
+# Build Gradio interface with four tabs
+# ------------------------------------------------------------------------
 
 with gr.Blocks() as demo:
     gr.Markdown("# Tachi Interface Demo")
@@ -53,4 +94,5 @@ with gr.Blocks() as demo:
         file_input.change(fn=handle_files, inputs=file_input, outputs=file_status)
 
 if __name__ == "__main__":
+    # Expose the app on all interfaces so RunPod can proxy it
     demo.launch(server_name="0.0.0.0", server_port=8888, show_error=True)
