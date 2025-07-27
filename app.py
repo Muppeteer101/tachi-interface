@@ -26,7 +26,7 @@ def handle_files(uploaded_files):
 with gr.Blocks() as demo:
     gr.Markdown("# Tachi Interface Demo")
     with gr.Tab(label="Voice"):
-        audio_input = gr.Audio(source="upload", type="filepath", label="Upload Audio")
+        audio_input = gr.Audio(type="filepath", label="Upload Audio")
         voice_output = gr.Textbox(label="Result")
         audio_input.change(fn=transcribe, inputs=audio_input, outputs=voice_output)
 
